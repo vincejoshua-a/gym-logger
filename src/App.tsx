@@ -3,8 +3,11 @@ import "./App.css";
 import { ExerciseCard } from "./components/ExerciseCard";
 import { UpdatePrompt } from "./components/UpdatePrompt";
 import type { ExerciseLog, SessionLog, WorkoutDay } from "./types";
-import { loadOrCreateSession, saveSession, todayISO } from "./storage/sessionStore";
+import { loadOrCreateSession, markSynced, saveSession, todayISO } from "./storage/sessionStore";
 import { getWorkout } from "./program/programSource";
+import { canSync, hasLoggedData, syncSession } from "./program/syncSession";
+
+type SyncState = "idle" | "syncing" | "ok" | "error";
 
 function prettyDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -34,6 +37,8 @@ function App() {
   const [session, setSession] = useState<SessionLog | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [syncMsg, setSyncMsg] = useState("");
 
   // Don't autosave the session we just loaded (only real edits should save).
   const skipSave = useRef(false);
@@ -43,6 +48,8 @@ function App() {
     let cancelled = false;
     setLoading(true);
     setSavedAt(null);
+    setSyncState("idle");
+    setSyncMsg("");
     (async () => {
       const fetched = await getWorkout(date);
       if (cancelled) return;
@@ -65,7 +72,30 @@ function App() {
     }
     saveSession(session);
     setSavedAt(new Date().toLocaleTimeString(undefined, { timeStyle: "short" }));
+    // A fresh edit means the log no longer matches the Sheet.
+    setSyncState("idle");
+    setSyncMsg("");
   }, [session]);
+
+  const doSync = async () => {
+    if (!session || !day) return;
+    setSyncState("syncing");
+    setSyncMsg("");
+    const res = await syncSession(session, day);
+    if (res.ok) {
+      skipSave.current = true; // markSynced already persisted; don't re-save as unsynced
+      setSession(markSynced(session));
+      setSyncState("ok");
+      const extra =
+        res.unmatched && res.unmatched.length
+          ? ` (${res.unmatched.length} not matched)`
+          : "";
+      setSyncMsg(`Synced ${res.setsWritten ?? 0} sets to the Sheet${extra}`);
+    } else {
+      setSyncState("error");
+      setSyncMsg(res.error || "Sync failed");
+    }
+  };
 
   const updateExercise = (exerciseId: string, log: ExerciseLog) => {
     setSession((prev) =>
@@ -174,6 +204,25 @@ function App() {
             />
           ))}
       </main>
+
+      {canSync(day) && hasLoggedData(session) && (
+        <div className="syncbar">
+          {syncMsg && (
+            <span className={`syncbar__msg syncbar__msg--${syncState}`}>{syncMsg}</span>
+          )}
+          <button
+            className="syncbar__btn"
+            onClick={doSync}
+            disabled={syncState === "syncing" || Boolean(session?.synced)}
+          >
+            {syncState === "syncing"
+              ? "Syncing…"
+              : session?.synced
+                ? "Synced ✓"
+                : "Sync to coach's Sheet"}
+          </button>
+        </div>
+      )}
 
       <footer className="app__footer">
         Saved on this device and works offline. Write-back to your coach's Sheet comes next.

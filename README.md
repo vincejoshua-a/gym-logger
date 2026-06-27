@@ -1,7 +1,7 @@
 # Gym Logger — PWA
 
 Mobile-first logger for actual weights/reps against a coach-prescribed program.
-Built from `gym-logger-plan.md`. **Currently: Phase 3 (reads program from the coach's Google Sheet) complete.**
+Built from `gym-logger-plan.md`. **Currently: Phase 4 (reads program from + writes actuals back to the coach's Google Sheet) complete.**
 
 **Live:** https://vincejoshua-a.github.io/gym-logger/ · Repo: https://github.com/vincejoshua-a/gym-logger
 
@@ -70,7 +70,9 @@ Config (two env vars):
   offline, "On device / Synced" status pill, update toast.
 - [x] **Phase 3** — read today's program live from the coach's Google Sheet (Apps Script
   endpoint), date navigation, rest-day handling, offline cache.
-- [ ] **Phase 4** — write actuals back to the Sheet; flip `synced`.
+- [x] **Phase 4** — write actuals back to the Sheet via a manual "Sync" button (`doPost`
+  in `Code.gs`, `src/program/syncSession.ts`). Matches exercises by name, writes only
+  non-empty W/R cells, flips the pill to green "Synced".
 - [ ] **Phase 5** — pre-fill last session, rest timer, history, plate calculator.
 - [ ] **Future (athlete request)** — secure the endpoint / add real auth so the program
   isn't readable by anyone with the app URL.

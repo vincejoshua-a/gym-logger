@@ -50,6 +50,78 @@ function doGet(e) {
   }
 }
 
+// ── Write endpoint (Phase 4) ───────────────────────────────────────────────
+// POST body (sent as text/plain to avoid a CORS preflight):
+//   { token, date, exercises: [{ name, sets: [{weight, reps}, ...] }, ...] }
+// Writes ONLY the athlete's weight/reps actual cells for the matched day.
+// Never clears a cell (empty values are skipped) and never touches prescription,
+// notes, or any non-actual cell.
+function doPost(e) {
+  try {
+    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (body.token !== SECRET) return json_({ ok: false, error: 'unauthorized' });
+    if (!body.date || !Array.isArray(body.exercises)) {
+      return json_({ ok: false, error: 'bad request' });
+    }
+    return json_(writeWorkout_(body.date, body.exercises));
+  } catch (err) {
+    return json_({ ok: false, error: String(err && err.message || err) });
+  }
+}
+
+function writeWorkout_(dateStr, payloadExercises) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  for (const sheet of ss.getSheets()) {
+    if (SKIP_NAME_RE.test(sheet.getName())) continue;
+    const values = sheet.getDataRange().getValues();
+    const hit = locateDay_(values, dateStr);
+    if (hit) return applyWrites_(sheet, values, hit, payloadExercises, dateStr);
+  }
+  return { ok: false, error: 'no workout found for ' + dateStr };
+}
+
+function applyWrites_(sheet, values, hit, payloadExercises, dateStr) {
+  const anchor = hit.anchorCol; // 1-indexed: Set-1 weight column for this week
+  const endRow = nextDatedRow_(values, anchor - 1, hit.dayRow);
+
+  // Map exercise name → 0-indexed row, for the exercise rows of this day.
+  const rowByName = {};
+  for (let r = hit.dayRow; r < endRow; r++) {
+    const muscle = String(values[r][COL_MUSCLE - 1] || '').trim();
+    const name = String(values[r][COL_NAME - 1] || '').trim();
+    if (muscle && name) rowByName[name.toLowerCase()] = r;
+  }
+
+  let setsWritten = 0;
+  const unmatched = [];
+  for (const ex of payloadExercises) {
+    const key = String(ex.name || '').trim().toLowerCase();
+    const r0 = rowByName[key];
+    if (r0 === undefined) {
+      unmatched.push(ex.name);
+      continue;
+    }
+    const sheetRow = r0 + 1; // 1-indexed
+    const sets = ex.sets || [];
+    for (let k = 0; k < Math.min(sets.length, SETS_PER_EXERCISE); k++) {
+      const wCol = anchor + 3 * k; // weight column for set k (1-indexed)
+      const w = sets[k] ? sets[k].weight : '';
+      const rp = sets[k] ? sets[k].reps : '';
+      let touched = false;
+      if (w !== '' && w != null) { sheet.getRange(sheetRow, wCol).setValue(toNum_(w)); touched = true; }
+      if (rp !== '' && rp != null) { sheet.getRange(sheetRow, wCol + 1).setValue(toNum_(rp)); touched = true; }
+      if (touched) setsWritten++;
+    }
+  }
+  return { ok: true, date: dateStr, block: sheet.getName(), setsWritten: setsWritten, unmatched: unmatched };
+}
+
+/** Numeric where possible (so the Sheet's TOTAL formulas recompute), else raw. */
+function toNum_(v) {
+  const n = Number(v);
+  return isNaN(n) ? String(v) : n;
+}
+
 // ── Core lookup ────────────────────────────────────────────────────────────
 function findWorkout_(dateStr) {
   const ss = SpreadsheetApp.openById(SHEET_ID);

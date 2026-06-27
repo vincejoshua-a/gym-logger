@@ -460,3 +460,48 @@
 .setbtn:active:not(:disabled) {
   background: var(--surface-2);
 }
+
+/* Sticky sync bar */
+.syncbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+}
+
+.syncbar__btn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent-strong);
+  color: #04283a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.syncbar__btn:disabled {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+.syncbar__msg {
+  font-size: 13px;
+  text-align: center;
+}
+.syncbar__msg--ok {
+  color: var(--good);
+}
+.syncbar__msg--error {
+  color: #f87171;
+}
+.syncbar__msg--syncing {
+  color: var(--text-dim);
+}

@@ -89,6 +89,21 @@ export function loadOrCreateSession(day: WorkoutDay, date: string): SessionLog {
   return empty;
 }
 
+/** Mark a log as synced (after a successful write-back) and persist it. */
+export function markSynced(session: SessionLog): SessionLog {
+  const synced: SessionLog = {
+    ...session,
+    synced: true,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(keyFor(synced.dayId, synced.date), JSON.stringify(synced));
+  } catch (err) {
+    console.error("Failed to persist synced flag:", err);
+  }
+  return synced;
+}
+
 /** Persist a log. Stamps updatedAt and marks it unsynced (local edit). */
 export function saveSession(session: SessionLog): void {
   try {
