@@ -1,0 +1,296 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+/* ---- Header (sticky, so day + progress stay visible while scrolling) ---- */
+.app__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 10px;
+  padding-top: calc(14px + env(safe-area-inset-top));
+}
+
+.app__header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app__day {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.app__date {
+  font-size: 14px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.app__status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.app__count {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app__saved {
+  color: var(--text-dim);
+}
+
+/* Pending-vs-synced indicator (the sync concept; real sync is a later phase). */
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.sync-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.sync-pill--pending .sync-pill__dot {
+  background: #f59e0b; /* amber: saved locally, not yet synced */
+}
+
+.sync-pill--synced .sync-pill__dot {
+  background: var(--good); /* green: pushed to the Sheet (future) */
+}
+
+.sync-pill__time {
+  color: var(--text-dim);
+}
+
+/* Service-worker toast (offline-ready / update-available). */
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.toast__msg {
+  white-space: nowrap;
+}
+
+.toast__btn {
+  border: none;
+  background: var(--accent-strong);
+  color: #04283a;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.toast__close {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+}
+
+/* ---- Main scroll area ---- */
+.app__main {
+  flex: 1;
+  padding: 16px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app__footer {
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* ---- Exercise card ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 14px;
+}
+
+.card__header {
+  margin-bottom: 12px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.card__rx {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.card__rx-main {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.card__rx-rpe {
+  color: var(--text-dim);
+}
+
+.card__progress {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- Set rows ---- */
+.card__sets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 1fr;
+  align-items: end;
+  gap: 10px;
+}
+
+.set-row--head {
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+.set-row--head .set-row__label,
+.set-row--head .set-row__field-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.set-row__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.set-row__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.set-row__field-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-left: 2px;
+}
+
+/* The big tap targets: tall, large font, no spinner. */
+.set-row__input {
+  height: 54px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  /* 18px keeps it readable and stops iOS from zooming on focus (>=16px). */
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.set-row__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.set-row__input::placeholder {
+  color: var(--surface-2);
+  font-weight: 500;
+}
+
+/* ---- Note ---- */
+.card__note {
+  display: block;
+  margin-top: 14px;
+}
+
+.card__note-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  padding-left: 2px;
+}
+
+.card__note-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.4;
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.card__note-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.card__note-input::placeholder {
+  color: var(--text-dim);
+}

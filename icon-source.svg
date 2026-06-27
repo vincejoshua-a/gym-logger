@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full-bleed background so the icon also works as a maskable icon
+       (the platform masks the corners; keep the dumbbell in the safe center). -->
+  <rect width="512" height="512" fill="#0f172a"/>
+  <g fill="#38bdf8">
+    <!-- handle -->
+    <rect x="196" y="239" width="120" height="34" rx="9"/>
+    <!-- inner plates -->
+    <rect x="152" y="201" width="44" height="110" rx="14"/>
+    <rect x="316" y="201" width="44" height="110" rx="14"/>
+    <!-- outer plates -->
+    <rect x="120" y="223" width="30" height="66" rx="11"/>
+    <rect x="362" y="223" width="30" height="66" rx="11"/>
+  </g>
+</svg>
