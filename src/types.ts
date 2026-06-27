@@ -3,36 +3,70 @@
 //
 // Two halves, kept separate on purpose (see the build plan, §4):
 //
-//   1. PROGRAM  — what the coach prescribes. Read-only reference. In Phase 1
-//      this is hardcoded (src/data/sampleProgram.ts). In Phase 3 it will be
-//      fetched from the Google Sheet. Nothing in the app mutates it.
+//   1. PROGRAM  — what the coach prescribes. Read-only reference. Fetched from
+//      the coach's Google Sheet (src/program/programSource.ts), cached locally,
+//      with a hardcoded sample as the offline last-resort. Nothing mutates it.
 //
 //   2. SESSION LOG — what you actually did. Created/edited by you, persisted
 //      locally (src/storage/sessionStore.ts). In Phase 4 these entries get
-//      flushed to the Sheet; the `synced` flag is the hook for that and is
-//      already here so the shape never has to change.
+//      flushed back to the Sheet; the `synced` flag is the hook for that.
 // ---------------------------------------------------------------------------
 
-/** What the coach prescribes for one exercise. */
+/**
+ * What the coach prescribes for one exercise, mirroring the Sheet:
+ * the working-sets string is free-form ("4x9-10", "5x10-12ea", "30min"), so we
+ * keep the raw text AND a best-effort parse. Intensity lives in the coach's
+ * note (RIR/tempo), not a clean RPE number.
+ */
 export interface Prescription {
-  /** Number of work sets, e.g. 4. */
-  sets: number;
-  /** Target reps as written by the coach: "5", "8-10", "AMRAP", etc. */
-  targetReps: string;
-  /** Target RPE (rate of perceived exertion), e.g. 8. Optional. */
-  targetRpe?: number;
+  /** Exactly as the coach wrote it, e.g. "4x9-10". Always displayed. */
+  raw: string;
+  /** Parsed set count, or null when it can't be inferred (e.g. "30min"). */
+  sets: number | null;
+  /** The rep part of the prescription, e.g. "9-10", "12", "30min". */
+  repRange: string;
+  /** Coach's tempo / RIR / cue note for this exercise. May be empty. */
+  coachNote: string;
 }
 
 export interface Exercise {
   id: string;
   name: string;
+  /** Muscle tag from the Sheet (chest, delts, legs…). */
+  muscle: string;
   prescription: Prescription;
 }
 
+/** Where a day's program came from (drives the UI source badge). */
+export type ProgramSource = "sheet" | "cache" | "sample";
+
 export interface WorkoutDay {
+  /** Stable per date, used as the session-log key. */
   id: string;
-  name: string;
+  /** ISO date string, e.g. "2026-06-27". */
+  date: string;
+  /** Block tab name, e.g. "Prep 1-4". */
+  block?: string;
+  weekNumber?: number;
+  weekLabel?: string;
+  /** e.g. "DAY 2 (Tuesday)". */
+  dayLabel?: string;
+  /** Session focus, e.g. "Chest / Delts / Pullups / Abs". */
+  focus?: string;
+  /** True when there are no exercises scheduled (rest day / unmatched date). */
+  restDay: boolean;
   exercises: Exercise[];
+  source: ProgramSource;
+  /** When restDay/unmatched: nearby training days the user can jump to. */
+  availableDays?: AvailableDay[];
+  /** Optional human message from the endpoint (e.g. "rest day?"). */
+  message?: string;
+}
+
+export interface AvailableDay {
+  date: string;
+  weekNumber: number;
+  dayLabel: string;
 }
 
 // --- Session log (your actuals) --------------------------------------------
@@ -46,7 +80,7 @@ export interface SetEntry {
 
 /** Your log for a single exercise within a session. */
 export interface ExerciseLog {
-  /** One entry per prescribed set; index 0 == set 1. */
+  /** One entry per set row; the count is user-adjustable (add/remove). */
   sets: SetEntry[];
   note: string;
 }
@@ -62,7 +96,7 @@ export interface SessionLog {
   /** Last local save time (ISO). */
   updatedAt: string;
   /**
-   * Whether this log has been pushed to the Sheet. Always false in Phase 1 —
+   * Whether this log has been pushed to the Sheet. Always false today —
    * exists now so Phase 4 sync can flip it without a data migration.
    */
   synced: boolean;

@@ -16,22 +16,30 @@ export function ExerciseCard({ exercise, log, onChange }: ExerciseCardProps) {
     onChange({ ...log, sets });
   };
 
+  const addSet = () => onChange({ ...log, sets: [...log.sets, { weight: "", reps: "" }] });
+
+  const removeSet = () => {
+    if (log.sets.length <= 1) return;
+    onChange({ ...log, sets: log.sets.slice(0, -1) });
+  };
+
   const doneCount = log.sets.filter((s) => s.weight && s.reps).length;
 
   return (
     <section className="card">
       <header className="card__header">
-        <h2 className="card__title">{exercise.name}</h2>
+        <div className="card__title-row">
+          <h2 className="card__title">{exercise.name}</h2>
+          {exercise.muscle && <span className="card__muscle">{exercise.muscle}</span>}
+        </div>
         <p className="card__rx">
-          <span className="card__rx-main">
-            {prescription.sets} × {prescription.targetReps}
-          </span>
-          {prescription.targetRpe !== undefined && (
-            <span className="card__rx-rpe"> @ RPE {prescription.targetRpe}</span>
+          <span className="card__rx-main">{prescription.raw || "—"}</span>
+          {prescription.coachNote && (
+            <span className="card__rx-note"> · {prescription.coachNote}</span>
           )}
         </p>
         <p className="card__progress">
-          {doneCount}/{prescription.sets} sets logged
+          {doneCount}/{log.sets.length} sets logged
         </p>
       </header>
 
@@ -49,6 +57,15 @@ export function ExerciseCard({ exercise, log, onChange }: ExerciseCardProps) {
             onChange={(e) => updateSet(i, e)}
           />
         ))}
+      </div>
+
+      <div className="card__setbtns">
+        <button type="button" className="setbtn" onClick={removeSet} disabled={log.sets.length <= 1}>
+          − Set
+        </button>
+        <button type="button" className="setbtn" onClick={addSet}>
+          + Set
+        </button>
       </div>
 
       <label className="card__note">

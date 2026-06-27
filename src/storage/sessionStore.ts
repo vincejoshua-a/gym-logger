@@ -23,12 +23,17 @@ export function todayISO(): string {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
 }
 
+/** How many set rows to start an exercise with (prescription, or 1 if unknown). */
+export function defaultSetCount(sets: number | null): number {
+  return sets && sets > 0 ? sets : 1;
+}
+
 /** Build a blank log whose shape matches the given day's prescription. */
 export function createEmptySession(day: WorkoutDay, date: string): SessionLog {
   const exercises: SessionLog["exercises"] = {};
   for (const ex of day.exercises) {
     exercises[ex.id] = {
-      sets: Array.from({ length: ex.prescription.sets }, () => ({
+      sets: Array.from({ length: defaultSetCount(ex.prescription.sets) }, () => ({
         weight: "",
         reps: "",
       })),
@@ -70,12 +75,14 @@ export function loadOrCreateSession(day: WorkoutDay, date: string): SessionLog {
   for (const ex of day.exercises) {
     const savedEx = saved.exercises[ex.id];
     if (!savedEx) continue;
-    const target = empty.exercises[ex.id];
-    target.note = savedEx.note ?? "";
-    // Copy across as many saved sets as the current prescription allows.
-    for (let i = 0; i < target.sets.length; i++) {
-      if (savedEx.sets[i]) target.sets[i] = savedEx.sets[i];
-    }
+    // Keep the user's full saved log (including any sets they added/removed).
+    empty.exercises[ex.id] = {
+      note: savedEx.note ?? "",
+      sets:
+        Array.isArray(savedEx.sets) && savedEx.sets.length > 0
+          ? savedEx.sets
+          : empty.exercises[ex.id].sets,
+    };
   }
   // Preserve sync status from the saved copy.
   empty.synced = saved.synced ?? false;

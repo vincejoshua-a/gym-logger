@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
-import { sampleDay } from "./data/sampleProgram";
 import { ExerciseCard } from "./components/ExerciseCard";
 import { UpdatePrompt } from "./components/UpdatePrompt";
-import type { ExerciseLog, SessionLog } from "./types";
+import type { ExerciseLog, SessionLog, WorkoutDay } from "./types";
 import { loadOrCreateSession, saveSession, todayISO } from "./storage/sessionStore";
+import { getWorkout } from "./program/programSource";
 
 function prettyDate(iso: string): string {
-  // iso is "YYYY-MM-DD"; render in the local locale, no timezone shifting.
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, {
     weekday: "short",
@@ -16,21 +15,52 @@ function prettyDate(iso: string): string {
   });
 }
 
-function App() {
-  const day = sampleDay;
-  const date = useMemo(() => todayISO(), []);
+function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  const off = dt.getTimezoneOffset() * 60_000;
+  return new Date(dt.getTime() - off).toISOString().slice(0, 10);
+}
 
-  // Load saved progress (or a fresh blank session) once on mount.
-  const [session, setSession] = useState<SessionLog>(() =>
-    loadOrCreateSession(day, date),
-  );
+const SOURCE_LABEL: Record<WorkoutDay["source"], string> = {
+  sheet: "from Sheet",
+  cache: "offline copy",
+  sample: "sample (offline)",
+};
+
+function App() {
+  const [date, setDate] = useState<string>(() => todayISO());
+  const [day, setDay] = useState<WorkoutDay | null>(null);
+  const [session, setSession] = useState<SessionLog | null>(null);
+  const [loading, setLoading] = useState(true);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  // Autosave on every edit. Skip the very first render (nothing changed yet).
-  const firstRender = useRef(true);
+  // Don't autosave the session we just loaded (only real edits should save).
+  const skipSave = useRef(false);
+
+  // Load the program + log whenever the date changes.
   useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
+    let cancelled = false;
+    setLoading(true);
+    setSavedAt(null);
+    (async () => {
+      const fetched = await getWorkout(date);
+      if (cancelled) return;
+      skipSave.current = true;
+      setDay(fetched);
+      setSession(loadOrCreateSession(fetched, date));
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  // Autosave on every edit.
+  useEffect(() => {
+    if (!session) return;
+    if (skipSave.current) {
+      skipSave.current = false;
       return;
     }
     saveSession(session);
@@ -38,14 +68,14 @@ function App() {
   }, [session]);
 
   const updateExercise = (exerciseId: string, log: ExerciseLog) => {
-    setSession((prev) => ({
-      ...prev,
-      exercises: { ...prev.exercises, [exerciseId]: log },
-    }));
+    setSession((prev) =>
+      prev ? { ...prev, exercises: { ...prev.exercises, [exerciseId]: log } } : prev,
+    );
   };
 
-  const totalSets = day.exercises.reduce((n, e) => n + e.prescription.sets, 0);
-  const doneSets = Object.values(session.exercises).reduce(
+  const sets = session ? Object.values(session.exercises) : [];
+  const totalSets = sets.reduce((n, log) => n + log.sets.length, 0);
+  const doneSets = sets.reduce(
     (n, log) => n + log.sets.filter((s) => s.weight && s.reps).length,
     0,
   );
@@ -53,40 +83,100 @@ function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <div className="app__header-row">
-          <h1 className="app__day">{day.name}</h1>
-          <span className="app__date">{prettyDate(date)}</span>
+        <div className="app__nav">
+          <button
+            className="app__navbtn"
+            onClick={() => setDate((d) => addDays(d, -1))}
+            aria-label="Previous day"
+          >
+            ‹
+          </button>
+          <div className="app__nav-center">
+            <span className="app__date">{prettyDate(date)}</span>
+            {date === todayISO() && <span className="app__today">Today</span>}
+          </div>
+          <button
+            className="app__navbtn"
+            onClick={() => setDate((d) => addDays(d, 1))}
+            aria-label="Next day"
+          >
+            ›
+          </button>
         </div>
+
+        <div className="app__header-row">
+          <h1 className="app__day">
+            {day?.dayLabel || day?.focus || (loading ? "Loading…" : "Workout")}
+          </h1>
+        </div>
+        {day && (day.block || day.weekLabel || day.focus) && (
+          <p className="app__sub">
+            {[day.block, day.weekLabel, day.dayLabel ? day.focus : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+
         <div className="app__status">
           <span className="app__count">
             {doneSets}/{totalSets} sets
           </span>
-          <span
-            className={`sync-pill ${
-              session.synced ? "sync-pill--synced" : "sync-pill--pending"
-            }`}
-            title="Sheet sync arrives in a later phase"
-          >
-            <span className="sync-pill__dot" aria-hidden="true" />
-            {session.synced ? "Synced" : "On device"}
-            {savedAt && <span className="sync-pill__time"> · {savedAt}</span>}
+          <span className="app__statusright">
+            {day && <span className={`src src--${day.source}`}>{SOURCE_LABEL[day.source]}</span>}
+            <span
+              className={`sync-pill ${
+                session?.synced ? "sync-pill--synced" : "sync-pill--pending"
+              }`}
+              title="Sheet write-back arrives in a later phase"
+            >
+              <span className="sync-pill__dot" aria-hidden="true" />
+              {session?.synced ? "Synced" : "On device"}
+              {savedAt && <span className="sync-pill__time"> · {savedAt}</span>}
+            </span>
           </span>
         </div>
       </header>
 
       <main className="app__main">
-        {day.exercises.map((exercise) => (
-          <ExerciseCard
-            key={exercise.id}
-            exercise={exercise}
-            log={session.exercises[exercise.id]}
-            onChange={(log) => updateExercise(exercise.id, log)}
-          />
-        ))}
+        {loading && <p className="app__msg">Loading today's workout…</p>}
+
+        {!loading && day && day.restDay && (
+          <div className="app__rest">
+            <p className="app__rest-title">No workout scheduled</p>
+            <p className="app__rest-sub">{day.message || "Looks like a rest day."}</p>
+            {day.availableDays && day.availableDays.length > 0 && (
+              <div className="app__jump">
+                <span className="app__jump-label">Jump to a training day:</span>
+                <div className="app__jump-btns">
+                  {day.availableDays
+                    .filter((d) => d.dayLabel)
+                    .map((d) => (
+                      <button key={d.date} className="jumpbtn" onClick={() => setDate(d.date)}>
+                        {prettyDate(d.date)} · {d.dayLabel.replace(/\s*\(.*\)/, "")}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading &&
+          day &&
+          !day.restDay &&
+          session &&
+          day.exercises.map((exercise) => (
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              log={session.exercises[exercise.id]}
+              onChange={(log) => updateExercise(exercise.id, log)}
+            />
+          ))}
       </main>
 
       <footer className="app__footer">
-        Everything is saved on this device and works offline. Sheet sync comes later.
+        Saved on this device and works offline. Write-back to your coach's Sheet comes next.
       </footer>
 
       <UpdatePrompt />

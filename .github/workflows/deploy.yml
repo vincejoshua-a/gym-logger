@@ -28,6 +28,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_SHEET_ENDPOINT: ${{ secrets.VITE_SHEET_ENDPOINT }}
+          VITE_SHEET_TOKEN: ${{ secrets.VITE_SHEET_TOKEN }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

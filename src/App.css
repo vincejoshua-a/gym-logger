@@ -294,3 +294,169 @@
 .card__note-input::placeholder {
   color: var(--text-dim);
 }
+
+/* ===== Phase 3: Sheet program UI ===== */
+
+/* Day navigation */
+.app__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.app__navbtn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app__navbtn:active {
+  background: var(--surface-2);
+}
+
+.app__nav-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app__today {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.app__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.app__statusright {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Source badge (where the program came from) */
+.src {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.src--sheet {
+  color: var(--good);
+  border-color: rgba(74, 222, 128, 0.4);
+}
+.src--sample,
+.src--cache {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Loading / rest states */
+.app__msg {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 32px 16px;
+}
+
+.app__rest {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 16px;
+  text-align: center;
+}
+.app__rest-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.app__rest-sub {
+  margin: 6px 0 0;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.app__jump {
+  margin-top: 18px;
+}
+.app__jump-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.app__jump-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.jumpbtn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+/* Exercise card additions */
+.card__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card__muscle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: rgba(56, 189, 248, 0.12);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+.card__rx-note {
+  color: var(--text-dim);
+}
+
+/* Add / remove set buttons */
+.card__setbtns {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.setbtn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 0;
+  border-radius: 10px;
+}
+.setbtn:disabled {
+  opacity: 0.4;
+}
+.setbtn:active:not(:disabled) {
+  background: var(--surface-2);
+}
