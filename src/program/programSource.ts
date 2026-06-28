@@ -21,6 +21,7 @@ interface SheetExercise {
   sets: number | null;
   repRange: string;
   note: string;
+  logged?: { weight: string; reps: string }[];
 }
 interface SheetResponse {
   found: boolean;
@@ -61,6 +62,7 @@ function mapResponse(r: SheetResponse): WorkoutDay {
       repRange: e.repRange,
       coachNote: e.note,
     },
+    logged: e.logged?.map((s) => ({ weight: s.weight ?? "", reps: s.reps ?? "" })),
   }));
   return {
     id: r.date,
@@ -125,4 +127,30 @@ export async function getWorkout(date: string): Promise<WorkoutDay> {
     }
   }
   return loadCachedProgram(date) ?? sampleDayFor(date);
+}
+
+function shiftDate(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + days);
+  const off = dt.getTimezoneOffset() * 60_000;
+  return new Date(dt.getTime() - off).toISOString().slice(0, 10);
+}
+
+/**
+ * Last week's logged actuals, keyed by lowercased exercise name. Used to show
+ * "numbers to beat". Pulls the date 7 days earlier; if that falls in a previous
+ * block with different exercises, names simply won't match (no reference shown).
+ * Returns {} when the endpoint doesn't supply `logged` (e.g. pre-Phase-5 script).
+ */
+export async function getLastWeekActuals(
+  date: string,
+): Promise<Record<string, { weight: string; reps: string }[]>> {
+  const day = await getWorkout(shiftDate(date, -7));
+  const map: Record<string, { weight: string; reps: string }[]> = {};
+  for (const ex of day.exercises) {
+    if (ex.logged && ex.logged.some((s) => s.weight || s.reps)) {
+      map[ex.name.toLowerCase()] = ex.logged;
+    }
+  }
+  return map;
 }

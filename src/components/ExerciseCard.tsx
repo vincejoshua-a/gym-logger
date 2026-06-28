@@ -4,12 +4,19 @@ import { SetRow } from "./SetRow";
 interface ExerciseCardProps {
   exercise: Exercise;
   log: ExerciseLog;
+  /** Last week's logged sets for this exercise (numbers to beat). */
+  lastWeekSets?: SetEntry[];
   onChange: (log: ExerciseLog) => void;
 }
 
 /** One exercise: prescribed targets up top, a row per set, then a note field. */
-export function ExerciseCard({ exercise, log, onChange }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, log, lastWeekSets, onChange }: ExerciseCardProps) {
   const { prescription } = exercise;
+
+  // Last week's sets that actually have data, formatted "100×9".
+  const lastWeek = (lastWeekSets ?? [])
+    .filter((s) => s.weight || s.reps)
+    .map((s) => `${s.weight || "–"}×${s.reps || "–"}`);
 
   const updateSet = (index: number, entry: SetEntry) => {
     const sets = log.sets.map((s, i) => (i === index ? entry : s));
@@ -41,6 +48,11 @@ export function ExerciseCard({ exercise, log, onChange }: ExerciseCardProps) {
         <p className="card__progress">
           {doneCount}/{log.sets.length} sets logged
         </p>
+        {lastWeek.length > 0 && (
+          <p className="card__lastweek">
+            <span className="card__lastweek-label">Last week</span> {lastWeek.join(" · ")}
+          </p>
+        )}
       </header>
 
       <div className="card__sets">

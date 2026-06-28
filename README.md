@@ -73,7 +73,9 @@ Config (two env vars):
 - [x] **Phase 4** — write actuals back to the Sheet via a manual "Sync" button (`doPost`
   in `Code.gs`, `src/program/syncSession.ts`). Matches exercises by name, writes only
   non-empty W/R cells, flips the pill to green "Synced".
-- [ ] **Phase 5** — pre-fill last session, rest timer, history, plate calculator.
+- [x] **Phase 5** — "Last week" reference numbers (to beat) per exercise, pulled from the
+  prior week's column via the read endpoint's `logged` field; kg⇄lb converter (header
+  button, seeds from last weight). Rest timer intentionally skipped (athlete uses Apple Watch).
 - [ ] **Future (athlete request)** — secure the endpoint / add real auth so the program
   isn't readable by anyone with the app URL.
 

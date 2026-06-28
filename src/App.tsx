@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { ExerciseCard } from "./components/ExerciseCard";
 import { UpdatePrompt } from "./components/UpdatePrompt";
+import { UnitConverter } from "./components/UnitConverter";
 import type { ExerciseLog, SessionLog, WorkoutDay } from "./types";
 import { loadOrCreateSession, markSynced, saveSession, todayISO } from "./storage/sessionStore";
-import { getWorkout } from "./program/programSource";
+import { getLastWeekActuals, getWorkout } from "./program/programSource";
 import { canSync, hasLoggedData, syncSession } from "./program/syncSession";
+
+type SetEntry = { weight: string; reps: string };
 
 type SyncState = "idle" | "syncing" | "ok" | "error";
 
@@ -39,6 +42,8 @@ function App() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [syncMsg, setSyncMsg] = useState("");
+  const [converterOpen, setConverterOpen] = useState(false);
+  const [lastWeek, setLastWeek] = useState<Record<string, SetEntry[]>>({});
 
   // Don't autosave the session we just loaded (only real edits should save).
   const skipSave = useRef(false);
@@ -50,6 +55,7 @@ function App() {
     setSavedAt(null);
     setSyncState("idle");
     setSyncMsg("");
+    setLastWeek({});
     (async () => {
       const fetched = await getWorkout(date);
       if (cancelled) return;
@@ -57,6 +63,9 @@ function App() {
       setDay(fetched);
       setSession(loadOrCreateSession(fetched, date));
       setLoading(false);
+      // Last week's numbers (to beat) — loaded after the main render.
+      const prev = await getLastWeekActuals(date);
+      if (!cancelled) setLastWeek(prev);
     })();
     return () => {
       cancelled = true;
@@ -110,6 +119,16 @@ function App() {
     0,
   );
 
+  // Seed the converter with the most recent weight you typed.
+  let lastWeight = "";
+  if (session && day) {
+    for (const ex of day.exercises) {
+      for (const s of session.exercises[ex.id]?.sets ?? []) {
+        if (s.weight) lastWeight = s.weight;
+      }
+    }
+  }
+
   return (
     <div className="app">
       <header className="app__header">
@@ -138,6 +157,13 @@ function App() {
           <h1 className="app__day">
             {day?.dayLabel || day?.focus || (loading ? "Loading…" : "Workout")}
           </h1>
+          <button
+            className="app__convbtn"
+            onClick={() => setConverterOpen(true)}
+            aria-label="Open kg to lb converter"
+          >
+            kg⇄lb
+          </button>
         </div>
         {day && (day.block || day.weekLabel || day.focus) && (
           <p className="app__sub">
@@ -200,6 +226,7 @@ function App() {
               key={exercise.id}
               exercise={exercise}
               log={session.exercises[exercise.id]}
+              lastWeekSets={lastWeek[exercise.name.toLowerCase()]}
               onChange={(log) => updateExercise(exercise.id, log)}
             />
           ))}
@@ -227,6 +254,12 @@ function App() {
       <footer className="app__footer">
         Saved on this device and works offline. Write-back to your coach's Sheet comes next.
       </footer>
+
+      <UnitConverter
+        open={converterOpen}
+        onClose={() => setConverterOpen(false)}
+        initialKg={lastWeight}
+      />
 
       <UpdatePrompt />
     </div>

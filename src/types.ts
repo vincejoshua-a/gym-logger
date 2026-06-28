@@ -35,6 +35,9 @@ export interface Exercise {
   /** Muscle tag from the Sheet (chest, delts, legs…). */
   muscle: string;
   prescription: Prescription;
+  /** Actuals currently in the Sheet for this exercise (used for the
+   *  "last week" reference when fetched for the prior week's date). */
+  logged?: SetEntry[];
 }
 
 /** Where a day's program came from (drives the UI source badge). */

@@ -183,6 +183,17 @@ function buildDay_(values, hit, blockName, dateStr) {
     if (!muscle || !name) continue; // exercise rows always have a muscle tag + name
     const presc = String(values[r][prescCol - 1] || '').trim();
     const parsed = parsePrescription_(presc);
+    // Current actuals already in the Sheet (powers the "last week" reference).
+    const logged = [];
+    for (let k = 0; k < SETS_PER_EXERCISE; k++) {
+      const wc = anchor - 1 + 3 * k; // 0-indexed weight column for set k
+      const w = values[r][wc];
+      const rp = values[r][wc + 1];
+      logged.push({
+        weight: w === '' || w == null ? '' : String(w),
+        reps: rp === '' || rp == null ? '' : String(rp),
+      });
+    }
     exercises.push({
       order: exercises.length + 1,
       muscle: muscle,
@@ -191,6 +202,7 @@ function buildDay_(values, hit, blockName, dateStr) {
       sets: parsed.sets,           // best-effort number, or null
       repRange: parsed.repRange,   // e.g. "9-10", "12", "30min"
       note: String(values[r][noteCol - 1] || '').trim(),
+      logged: logged,              // current W/R in the Sheet (may be empty)
     });
   }
 
